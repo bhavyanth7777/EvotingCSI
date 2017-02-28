@@ -26,7 +26,7 @@
           background: #F5F5F5;
           font-family: "Roboto";
         }
-                
+
         .loading p{
             margin-top: 2%;
             font-size: 30px;
@@ -39,7 +39,7 @@
         .login form {
           width: 100%;
         }
-                
+
         .login label {
             width: 100%;
             padding: 20px;
@@ -49,12 +49,12 @@
         .logo {
             margin-top:15%;
         }
-                
+
         .loginfooter {
                   font-size: 11px; color: #212121; position: absolute; position: fixed; bottom: 0; left: 0;
                   width: 100%; text-align: center; padding: 5px 0; }
-                
-                
+
+
         input {
             background: none repeat scroll 0 0 rgba(0, 0, 0, 0.7);
             border: 1px solid rgba(0, 0, 0, 0.3);
@@ -89,7 +89,7 @@
 </head>
 
 <body link="white">
-    
+
 
   <div class="loading" align="center">
       <p>Welcome to eVoting Portal</p>
@@ -100,7 +100,7 @@
         {
             document.getElementById('form').submit();
         }
-        var ws = new WebSocket("ws://localhost:8888/ws");
+        var ws = new WebSocket("ws://ec2-52-33-71-168.us-west-2.compute.amazonaws.com:8080/ws");
         ws.onopen = function(evt)
         {
             //alert("socket opened client side");
@@ -110,7 +110,7 @@
         {
             //alert("socket closed client side");
         }
-        ws.onmessage = function(evt) 
+        ws.onmessage = function(evt)
         {
             //alert("Received message");
             messageFromServer = evt.data;
@@ -147,7 +147,7 @@
         <form method='post' action='/check' id="form">
             <input type="text" name="u" placeholder="Username" required="required" id='u'/>
             <input type="password" name="p" placeholder="Password" required="required" id='p'/>
-              
+
             <button type="button" onclick="clicked();" class="btn btn-primary btn-block btn-large" >Login</button>
         </form>
     </div>
