@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>CSI | eVoting Portal</title>
+
+  <link rel="stylesheet" href="static/css/normalize.css">
+
+    <link rel="stylesheet" href="static/css/style.css" media="screen" type="text/css" />
+    <link rel="stylesheet" href="static/css/style2.css" media="screen" type="text/css" />
+
+    <script src="static/js/modernizr.js"></script>
+    <script src="static/js/jquery.js"></script>
+    <script src="static/js/vui.js"></script>
+
+</head>
+<!--
+  All the link/overlays/content start from 1.
+  By default 1 is visible and the rest are hidden.
+-->
+<body>
+
+  <script type="text/javascript">
+  var ws = new WebSocket("ws://localhost:8888/ws");
+  // We add +2 because review section also comes after all positions.
+  $(document).ready(function()
+  {
+      {% for i in range(2,len(positions)+2) %}
+          $('#ev-wrapper{{i}}').hide();
+      {% end %}
+
+      {% for i in range(1,len(positions)+2) %}
+
+          $('#link_{{i}}').click(function()
+           {
+              {% for x in range(1,len(positions)+2) %}
+                  $('#ev-wrapper{{x}}').hide();
+              {%end%}
+              $('#ev-wrapper{{i}}').show();
+            }
+          );
+        //   $('#change{{i}}').click(function()
+        //   {
+        //     // $('#overlayStuff{{i}}').hide();
+        //     {% for x in range(1,len(positions)+2) %}
+        //           $('#ev-wrapper{{x}}').hide();
+        //     {%end%}
+        //   $('#ev-wrapper{{i+1}}').show();
+        //   }
+        // );
+      {%end%}
+  });
+
+
+  //  Onclick Voting using sockets.
+  function createDomStructureForReview(candidates)
+  {
+    domObject = document.getElementById('reviewDOM');
+    while (domObject.firstChild) {
+        domObject.removeChild(domObject.firstChild);
+    }
+    candidates = JSON.parse(candidates);
+    var count = 0;
+    for (var position in candidates)
+    {
+      if (position != "BallotId" && position != "Submitted")
+      {
+        count++;
+        domObject = document.getElementById('reviewDOM');
+        // List element created.
+        listObject = document.createElement("li");
+        listObject.className = "ev-user-" + toString(count) + " finalist-" + toString(count);
+        // Span Element Created.
+        spanObject = document.createElement("span");
+        spanObject.className = "ev-headshot";
+        // Image element created that is to be inserted inside span.
+        imageObjectInsideSpan = document.createElement("img");
+        imageObjectInsideSpan.src = "/static/img/" + candidates[position][0]+".png";
+        imageObjectInsideSpan.width = "160";
+        imageObjectInsideSpan.height = "160";
+        // Appending Image to Span.
+        spanObject.appendChild(imageObjectInsideSpan);
+        // Appending span to list
+        listObject.appendChild(spanObject);
+        // Header element created.
+        candidateName = document.createElement("h3");
+        textNode = document.createTextNode(candidates[position][1]);
+        candidateName.appendChild(textNode);
+        listObject.appendChild(candidateName);
+        // Creating Paragraph Tag
+        paraTag = document.createElement("p");
+        paraTextNode = document.createTextNode("CSI");
+        paraTag.appendChild(paraTextNode);
+        listObject.appendChild(paraTag);
+        //Creating Next Paragraph tag
+        secondParaTag = document.createElement("p");
+        secondParaTag.className = "ev-voting-launch ev-btn-edit";
+        secondParaTag.rel = "finalist-" + toString(count);
+        // Create the span that has to be appended to secondParaTag
+        spanObjectInSecondParaTag = document.createElement("span");
+        spanObjectInSecondParaTag.className = "text";
+        spanObjectInSecondParaTagTextNode = document.createTextNode(position);
+        spanObjectInSecondParaTag.appendChild(spanObjectInSecondParaTagTextNode);
+        secondParaTag.appendChild(spanObjectInSecondParaTag);
+        listObject.appendChild(secondParaTag);
+        //Creating thirdParaTag. This is getting boring.
+        thirdParaTag = document.createElement("p");
+        thirdParaTagTextNode = document.createTextNode("Click the button above to edit your choice.");
+        thirdParaTag.appendChild(thirdParaTagTextNode);
+        listObject.appendChild(thirdParaTag);
+        //Creating the DIVs!!!
+        divTag = document.createElement("div");
+        divTag.className = "ev-overlay ev-overlay-2";
+        secondDivTag = document.createElement("div");
+        secondDivTag.className =  "ev-overlay-content";
+        // Creating the edit elements insdie second DIV tag
+        editCandidate = document.createElement("h3");
+        editCandidateTextNode = document.createTextNode("Edit " + position + " ?");
+        editCandidate.appendChild(editCandidateTextNode);
+        secondDivTag.appendChild(editCandidate);
+        // anchor tag to click edit;
+        anchorTagForEdit = document.createElement("a");
+        anchorTagForEdit.href = "#";
+        anchorTagForEdit.className = "ev-vote ev-vote-finalist2 ev-btn";
+        anchorTagForEdit.style.marginTop = "50px";
+        anchorTagForEditTextNode = document.createTextNode("Edit");
+        anchorTagForEdit.appendChild(anchorTagForEditTextNode);
+        secondDivTag.appendChild(anchorTagForEdit);
+        // Anchor tag for cancel
+        anchorTagForCancel = document.createElement("a");
+        anchorTagForCancel.href = "#";
+        anchorTagForCancel.className = "ev-vote-cancel ev-btn";
+        anchorTagForCancelTextNode = document.createTextNode("Cancel");
+        anchorTagForCancel.appendChild(anchorTagForCancelTextNode);
+        secondDivTag.appendChild(anchorTagForCancel);
+        divTag.appendChild(secondDivTag);
+        listObject.appendChild(divTag);
+        domObject.appendChild(listObject);
+      }
+    }
+
+
+  }
+  function submitForm()
+  {
+      document.getElementById('form').submit();
+  }
+  function submitted(){
+    var checkBox = document.getElementById('reviewed');
+    var otp = document.getElementById('otp');
+    if (checkBox.checked)
+    {
+      if (otp.value == '123')
+      {
+        var messageToServer = {messageType:"submitted", messageData:''};
+        messageToServer = JSON.stringify(messageToServer);
+        ws.send(messageToServer);
+      }
+      else
+      {
+        alert ("The OTP did not match. We have sent a different OTP. Please enter the new OTP!");
+      }
+    }
+    else
+    {
+      alert("You have not clicked on the checkbox. Kindly check it before submitting.");
+    }
+  }
+  function vote(n,p,pname)
+  {
+    var id = n;
+    var position = p;
+    var nameOfCandidate = pname;
+    var messageToServer = {messageType:"voted", messageData:'', 'id':id, 'position':position, 'candidateName':pname};
+    messageToServer = JSON.stringify(messageToServer);
+    ws.send(messageToServer);
+  };
+  function getSelectedCandidates()
+  {
+    var messageToServer = {messageType:"getSelectedCandidates", messageData:''}
+    messageToServer = JSON.stringify(messageToServer)
+    ws.send(messageToServer)
+  }
+  ws.onopen = function(evt)
+  {
+      //alert("socket opened client side");
+
+  }
+  ws.onclose = function(evt)
+  {
+      //alert("socket closed client side");
+  }
+  ws.onmessage = function(evt)
+  {
+      //alert("Received message");
+      messageFromServer = evt.data;
+      messageFromServer = JSON.parse(messageFromServer);
+      messageType = messageFromServer.messageType;
+      if (messageType=="votedVerificaiton")
+      {
+          message = messageFromServer.message;
+          alert(message);
+      }
+      else if (messageType == "selectedCandidate")
+      {
+          candidates = JSON.stringify(messageFromServer.message);
+          createDomStructureForReview(candidates);
+          //alert(candidates);
+      }
+      else if (messageType == "SubmittedResponse")
+      {
+        window.location.href = "/thankyou";
+      }
+  }
+  </script>
+
+<!--   Overlay for fixed sidebar -->
+<div class="sidebar-overlay"></div>
+
+<div class="sidebar-header header-cover">
+  <a class="sidebar-toggle">
+    <img src="static/img/menu.svg">
+  </a>
+</div>
+
+<!-- Material sidebar -->
+<aside id="sidebar" class="sidebar sidebar-default open" role="navigation">
+
+<div>
+    <!-- Sidebar navigation -->
+    <ul class="nav sidebar-nav">
+
+        <li>
+            <a href="#">
+                <!--i class="sidebar-icon md-inbox"></i-->
+                My Profile
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <!--i class="sidebar-icon md-inbox"></i-->
+                Help
+            </a>
+        </li>
+        <li>
+            <a href="/logout" id="">
+                <!--i class="sidebar-icon md-inbox"></i-->
+                Logout
+            </a>
+        </li>
+        <p style="margin-left:5%;"><font size=4>Choose Your Candidates</font></p>
+        <li class="divider"></li>
+
+        <!-- To print all the positions on the sidebar -->
+        {% for i in range(len(positions))%}
+        <li>
+            <a href="#" id="link_{{i+1}}">
+                <!--i class="sidebar-icon md-inbox"></i-->
+                 <span id="candidateName{{i+1}}"> {{positions[i]}} </span>
+                 <span id="p-tick{{i+1}}" class="tickMark"></span>
+            </a>
+        </li>
+        {% end %}
+
+        <li class="divider"></li>
+        <li>
+            <a href="#" id="link_{{len(positions)+1}}" onclick="getSelectedCandidates()">
+                <!--i class="sidebar-icon md-drafts"></i-->
+                Review Candidates & Submit
+            </a>
+        </li>
+        <li class="divider"></li>
+
+    </ul>
+
+    <div id="fontlinks">
+        <p>You logged in from: {{ip}}</p>
+    		<a href="#" id="incfont" class="button buttonfont">A+</a>
+    		<a href="#" id="decfont" class="button buttonfont">A-</a>
+    </div>
+
+    <img src="static/img/logo.png" width="100" height="100" style="margin-left: 5%; margin-top: 10%;">
+
+    <!-- Sidebar divider -->
+    <!-- <div class="sidebar-divider"></div> -->
+
+    <!-- Sidebar text -->
+    <!--  <div class="sidebar-text">Text</div> -->
+</aside>
+
+<div class="wrapper" id="content">
+    <!--For all the different positions.-->
+    {% for i in range(len(candidatesList)) %}
+      <div class="ev-wrapper" id="ev-wrapper{{i+1}}">
+        <div class="ev-header">
+          <small>March 28, 2015 &mdash; March 30, 2015</small>
+          <h2 class="ev-headline">{{positions[i]}} Nominations</h2>
+        </div>
+
+        <ul class="ev-user">
+            <!-- For all the different candidates in each position -->
+            {% for s in range(len(candidatesList[i])) %}
+              <li class="ev-user-{{s+1}} finalist-{{s+1}}">
+                <span class="ev-headshot"><img src="static/img/{{idList[i][s]}}.png" width="160" height="160" /></span>
+
+                <h3>{{candidatesList[i][s]}}</h3>
+                <p>CSI</p>
+                <a href="#" class="ev-voting-launch ev-btn" rel="finalist-{{s+1}}">
+                  <span class="text">Select & Save</span>
+                  <span class="overlay"></span>
+                </a>
+              </li>
+            {% end %}
+        </ul>
+
+        <ul class="ev-content">
+          {% for n in range(1,len(candidatesList[i])+1) %}
+            <li class="ev-content-{{n}} finalist-{{n}}">
+              <div class="ev-content-body">
+                <span class="ev-headshot"><img src="static/img/{{ idList[i][n-1]}}.png" width="160" height="160" /></span>
+                <h3>{{candidatesList[i][n-1]}}</h3>
+                <p>CSI</p>
+                <p>{{ description[i][n-1]}}</p>
+                <div class="ev-video">
+                  <p><a href="#" class="ev-voting-launch ev-btn" rel="finalist-{{n}}">Select & Save Candidate</a></p>
+                </div>
+              </div>
+              <div id= "overlayStuff{{n}}"class="ev-overlay ev-overlay-{{n}}">
+                <div class="ev-overlay-content">
+                  <span class="ev-headshot"><img src="static/img/{{ idList[i][n-1]}}.png" width="160" height="160" /></span>
+                  <h3>Select <span>{{candidatesList[i][n-1]}}</span></h3>
+                  <a id="change{{i+1}}" href"#" onclick="vote({{ idList[i][n-1] }},'{{ positions[i]}}','{{candidatesList[i][n-1] }}');$('#link_{{i+2}}').click(); setTickMark({{ i+1 }});" class="ev-vote-yes ev-btn">Yes!</a> <a href="#" class="ev-vote-cancel ev-btn">Cancel</a>
+                </div>
+              </div>
+            </li>
+          {% end %}
+        </ul>
+      </div>
+    {% end %}
+
+    <!--REVIEW SECTION-->
+
+    <div class="ev-wrapper" id="ev-wrapper{{len(positions)+1}}" style="background-color:#F5F5F5; margin-left:40px;">
+        <div class="ev-header">
+          <small>March 28, 2015 &mdash; March 30, 2015</small>
+          <h2 class="ev-headline">Review your candidate selections</h2>
+        </div>
+
+        <ul id="reviewDOM" class="ev-user" style="color:green">
+
+        </ul>
+
+    <ul class="ev-content-edit">
+
+        <form name='form' id='form' method='post' action='/thankyou'>
+            <input type="checkbox" id="reviewed" name="reviewed" required> I have reviewed my selections.<br><br>
+            One Type Password (OTP): <input type="text" name="otp" id= "otp" placeholder="Enter your OTP as 123" required><br><br>
+            <div class="ev-video">
+                <p>
+                  <a href="#" class="ev-btn" rel="finalist-2" onclick='submitted();'>Submit</a>
+                </p>
+            </div>
+        </form>
+    </ul>
+
+    </div>
+
+
+        <!--div class="loginfooter" align="center" style="margin-top:200px">
+    <p>&copy; 2015 Computer Society of India. All Rights Reserved.</p>
+      </div-->
+
+    </div>
+
+    <script type="text/javascript">
+      for (var i=0; i< {{ len(positions) }}; i++)
+      {
+        var tempVar = "candidateName" + (i+1);
+        var obj = document.getElementById(tempVar);
+        var name = obj.innerHTML;
+        var tick  = document.getElementById('p-tick'+(i+1));
+
+        {% for x in voted %}
+            var anotherTempVar = "{{ x }}"
+            anotherTempVar = anotherTempVar.trim();
+            name = name.trim();
+            if(name == anotherTempVar)
+            {
+                tick.innerHTML = "&#10003";
+            }
+        {% end %}
+      }
+    </script>
+
+</div>
+
+  <script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js'></script>
+
+  <script src="static/js/index.js"></script>
+
+<script type="text/javascript">
+
+  function setTickMark(i)
+  {
+      var tick  = document.getElementById('p-tick'+(i));
+      tick.innerHTML = "&#10003";
+  }
+   $(document).ready(function() {
+		$('#incfont').click(function(){
+        curSize= parseInt($('#content').css('font-size')) + 2;
+		if(curSize<=20)
+        $('#content').css('font-size', curSize);
+        });
+		$('#decfont').click(function(){
+        curSize= parseInt($('#content').css('font-size')) - 2;
+		if(curSize>=12)
+        $('#content').css('font-size', curSize);
+        });
+	});
+</script>
+
+
+</body>
+
+</html>
